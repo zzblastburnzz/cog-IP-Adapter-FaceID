@@ -1,24 +1,28 @@
 # Configuration for Cog ⚙️
 # Reference: https://github.com/replicate/cog/blob/main/docs/yaml.md
 build:
-  gpu: true
-  cuda: "11.8"
   python_version: "3.10"
   system_packages:
     - "libgl1-mesa-glx"
-    - "libsm6"
-    - "libxext6"
-    - "wget"
+    - "ffmpeg"
   python_packages:
-    - "accelerate==0.24.0"
-    - "diffusers==0.23.0"
-    - "einops"
-    - "invisible-watermark==0.2.0"
+    # ---- PyTorch CUDA 12.1 ----
+    - "torch==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121"
+    - "torchvision==0.16.2+cu121 --index-url https://download.pytorch.org/whl/cu121"
+    - "xformers==0.0.23.post1"
+    # ---- Diffusers stack mới ----
+    - "diffusers==0.27.2"
+    - "transformers==4.41.2"
+    - "accelerate==0.30.1"
+    - "safetensors==0.4.3"
+    # ---- InsightFace & deps (dùng CPU cho chắc khi build) ----
     - "insightface==0.7.3"
-    - "onnxruntime-gpu"
-    - "torch==2.0.1"
-    - "torchvision==0.15.2"
-    - "transformers==4.35.0"
-    - "git+https://github.com/tencent-ailab/IP-Adapter.git"
+    - "onnxruntime==1.17.1"
+    # ---- Khác ----
+    - "opencv-python-headless==4.10.0.84"
+    - "Pillow==10.3.0"
+  run:
+    - "python -c \"import torch; print('Torch:', torch.__version__)\""
+    - "python -c \"import transformers; import diffusers, accelerate; import safetensors; print('OK libs')\""
 
 predict: "predict.py:Predictor"
