@@ -2,27 +2,28 @@
 # Reference: https://github.com/replicate/cog/blob/main/docs/yaml.md
 build:
   python_version: "3.10"
-  system_packages:
-    - "libgl1-mesa-glx"
-    - "ffmpeg"
+  gpu: true
   python_packages:
-    # ---- PyTorch CUDA 12.1 ----
-    - "torch==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121"
-    - "torchvision==0.16.2+cu121 --index-url https://download.pytorch.org/whl/cu121"
-    - "xformers==0.0.23.post1"
-    # ---- Diffusers stack mới ----
-    - "diffusers==0.27.2"
-    - "transformers==4.41.2"
-    - "accelerate==0.30.1"
-    - "safetensors==0.4.3"
-    # ---- InsightFace & deps (dùng CPU cho chắc khi build) ----
-    - "insightface==0.7.3"
-    - "onnxruntime==1.17.1"
-    # ---- Khác ----
-    - "opencv-python-headless==4.10.0.84"
-    - "Pillow==10.3.0"
-  run:
-    - "python -c \"import torch; print('Torch:', torch.__version__)\""
-    - "python -c \"import transformers; import diffusers, accelerate; import safetensors; print('OK libs')\""
+    # PyTorch CUDA 12.1 stack (ổn định trên Replicate)
+    - torch==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
+    - torchvision==0.16.2+cu121 --index-url https://download.pytorch.org/whl/cu121
+    - xformers==0.0.23.post1
+    - triton==2.1.0
+
+    # Diffusers stack
+    - diffusers==0.27.2
+    - transformers==4.39.3
+    - accelerate==0.28.0
+    - safetensors==0.4.2
+    - sentencepiece==0.1.99
+
+    # Vision & Face
+    - opencv-python-headless==4.9.0.80
+    - insightface==0.7.3
+    - onnxruntime-gpu==1.17.1
+    - pillow==10.3.0
+
+    # IP-Adapter (cài thẳng từ Git để tránh lệch version)
+    - git+https://github.com/tencent-ailab/IP-Adapter.git@main
 
 predict: "predict.py:Predictor"
