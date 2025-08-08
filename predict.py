@@ -25,7 +25,11 @@ class Predictor(BasePredictor):
                 "wget -O ip-cache/ip-adapter-faceid_sd15.bin https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sd15.bin"
             )
 
-        self.app = FaceAnalysis(name="buffalo_l", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+       try:
+    self.app = FaceAnalysis(name="buffalo_l", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+except Exception:
+    # fallback CPU khi thiếu CUDA trong môi trường build
+    self.app = FaceAnalysis(name="buffalo_l", providers=['CPUExecutionProvider'])
 
         noise_scheduler = DDIMScheduler(
             num_train_timesteps=1000,
