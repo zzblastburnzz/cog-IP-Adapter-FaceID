@@ -4,6 +4,9 @@ build:
   python_version: "3.10"
   gpu: true
   python_packages:
+    # ⚠️ Pin NumPy 1.x để tương thích cv2/insightface/onnxruntime hiện tại
+    - numpy==1.26.4
+
     # PyTorch CUDA 12.1 stack (ổn định trên Replicate)
     - torch==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
     - torchvision==0.16.2+cu121 --index-url https://download.pytorch.org/whl/cu121
