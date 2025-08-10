@@ -4,35 +4,27 @@ build:
   python_version: "3.10"
   gpu: true
 
-  # CÀI THEO NHÓM NHỎ → tránh OOM
   run:
-    # 0) Nâng pip + tắt cache để giảm RAM/đĩa
+    # 0) Pip tối giản + tắt cache (gán theo lệnh để khỏi phải export)
     - pip install --upgrade pip setuptools wheel
-    - export PIP_NO_CACHE_DIR=1
 
-    # 1) Khóa NumPy 1.x trước để các wheel (cv2/onnxruntime) không build-from-source
-    - pip install --no-cache-dir "numpy==1.26.4"
+    # 1) Khóa NumPy 1.x trước
+    - PIP_NO_CACHE_DIR=1 pip install "numpy==1.26.4"
 
-    # 2) PyTorch CUDA 12.1 (wheel chính chủ)
-    - pip install --index-url https://download.pytorch.org/whl/cu121 \
-        torch==2.1.2+cu121 torchvision==0.16.2+cu121 triton==2.1.0 xformers==0.0.23.post1
+    # 2) PyTorch CUDA 12.1 (cài theo nhóm nhỏ để nhẹ RAM)
+    - PIP_NO_CACHE_DIR=1 pip install --index-url https://download.pytorch.org/whl/cu121 torch==2.1.2+cu121
+    - PIP_NO_CACHE_DIR=1 pip install --index-url https://download.pytorch.org/whl/cu121 torchvision==0.16.2+cu121 triton==2.1.0 xformers==0.0.23.post1
 
     # 3) Diffusers stack
-    - pip install --no-cache-dir diffusers==0.27.2 transformers==4.39.3 accelerate==0.28.0 safetensors==0.4.2 sentencepiece==0.1.99
+    - PIP_NO_CACHE_DIR=1 pip install diffusers==0.27.2 transformers==4.39.3 accelerate==0.28.0 safetensors==0.4.2 sentencepiece==0.1.99
 
     # 4) Vision & Face (cv2 an toàn với NumPy 1.26.4)
-    - pip install --no-cache-dir opencv-python-headless==4.8.1.78 insightface==0.7.3 onnxruntime-gpu==1.17.1 pillow==10.3.0
+    - PIP_NO_CACHE_DIR=1 pip install opencv-python-headless==4.8.1.78 insightface==0.7.3 onnxruntime-gpu==1.17.1 pillow==10.3.0
 
     # 5) IP-Adapter
-    - pip install --no-cache-dir "git+https://github.com/tencent-ailab/IP-Adapter.git@main"
+    - PIP_NO_CACHE_DIR=1 pip install "git+https://github.com/tencent-ailab/IP-Adapter.git@main"
 
-    # 6) Sanity in ra version để chắc môi trường đúng
-    - |
-      python - << 'PY'
-      import numpy, cv2, torch, transformers, diffusers
-      print("[BUILD SANITY] numpy", numpy.__version__, "| cv2", cv2.__version__)
-      print("[BUILD SANITY] torch", torch.__version__, "| transformers", transformers.__version__, "| diffusers", diffusers.__version__)
-      assert numpy.__version__.startswith("1.26"), "Expect numpy 1.26.x"
-      PY
+    # 6) Sanity: in version (1 dòng thôi, không dùng heredoc)
+    - python -c "import numpy,cv2,torch,transformers,diffusers; print('[BUILD SANITY] numpy', numpy.__version__, '| cv2', cv2.__version__); print('[BUILD SANITY] torch', torch.__version__, '| transformers', transformers.__version__, '| diffusers', diffusers.__version__); assert numpy.__version__.startswith('1.26'), 'Expect numpy 1.26.x'"
 
 predict: "predict.py:Predictor"
