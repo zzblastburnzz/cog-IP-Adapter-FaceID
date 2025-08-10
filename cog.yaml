@@ -1,30 +1,24 @@
 # Configuration for Cog ⚙️
-# Ref: https://github.com/replicate/cog/blob/main/docs/yaml.md
+# Reference: https://github.com/replicate/cog/blob/main/docs/yaml.md
 build:
-  python_version: "3.10"
   gpu: true
-
-  run:
-    # 0) Pip tối giản + tắt cache (gán theo lệnh để khỏi phải export)
-    - pip install --upgrade pip setuptools wheel
-
-    # 1) Khóa NumPy 1.x trước
-    - PIP_NO_CACHE_DIR=1 pip install "numpy==1.26.4"
-
-    # 2) PyTorch CUDA 12.1 (cài theo nhóm nhỏ để nhẹ RAM)
-    - PIP_NO_CACHE_DIR=1 pip install --index-url https://download.pytorch.org/whl/cu121 torch==2.1.2+cu121
-    - PIP_NO_CACHE_DIR=1 pip install --index-url https://download.pytorch.org/whl/cu121 torchvision==0.16.2+cu121 triton==2.1.0 xformers==0.0.23.post1
-
-    # 3) Diffusers stack
-    - PIP_NO_CACHE_DIR=1 pip install diffusers==0.27.2 transformers==4.39.3 accelerate==0.28.0 safetensors==0.4.2 sentencepiece==0.1.99
-
-    # 4) Vision & Face (cv2 an toàn với NumPy 1.26.4)
-    - PIP_NO_CACHE_DIR=1 pip install opencv-python-headless==4.8.1.78 insightface==0.7.3 onnxruntime-gpu==1.17.1 pillow==10.3.0
-
-    # 5) IP-Adapter
-    - PIP_NO_CACHE_DIR=1 pip install "git+https://github.com/tencent-ailab/IP-Adapter.git@main"
-
-    # 6) Sanity: in version (1 dòng thôi, không dùng heredoc)
-    - python -c "import numpy,cv2,torch,transformers,diffusers; print('[BUILD SANITY] numpy', numpy.__version__, '| cv2', cv2.__version__); print('[BUILD SANITY] torch', torch.__version__, '| transformers', transformers.__version__, '| diffusers', diffusers.__version__); assert numpy.__version__.startswith('1.26'), 'Expect numpy 1.26.x'"
+  cuda: "11.8"
+  python_version: "3.10"
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libsm6"
+    - "libxext6"
+    - "wget"
+  python_packages:
+    - "accelerate==0.24.0"
+    - "diffusers==0.23.0"
+    - "einops"
+    - "invisible-watermark==0.2.0"
+    - "insightface==0.7.3"
+    - "onnxruntime-gpu"
+    - "torch==2.0.1"
+    - "torchvision==0.15.2"
+    - "transformers==4.35.0"
+    - "git+https://github.com/tencent-ailab/IP-Adapter.git"
 
 predict: "predict.py:Predictor"
