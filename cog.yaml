@@ -1,15 +1,16 @@
 build:
   python_version: "3.10"
   python_requirements:
-    - torch==2.0.1+cpu --extra-index-url https://download.pytorch.org/whl/cpu
-    - torchvision==0.15.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu
-    - diffusers==0.23.0
-    - accelerate==0.24.0
-    - einops
-    - invisible-watermark==0.2.0
-    - insightface==0.7.3
-    - onnxruntime==1.22.0
-    - opencv-python-headless==4.10.0.84
-    - pillow==10.4.0
-    - git+https://github.com/tencent-ailab/IP-Adapter.git
+    - "torch==2.0.1+cpu --extra-index-url https://download.pytorch.org/whl/cpu"
+    - "torchvision==0.15.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu"
+    - "diffusers==0.23.0"
+    - "accelerate==0.24.0"
+    - "einops"
+    - "invisible-watermark==0.2.0"
+    - "insightface==0.7.3"
+    - "onnxruntime==1.22.0"
+    - "opencv-python-headless==4.10.0.84"
+    - "pillow==10.4.0"
+    - "git+https://github.com/tencent-ailab/IP-Adapter.git"
+
 predict: "predict.py:Predictor"
