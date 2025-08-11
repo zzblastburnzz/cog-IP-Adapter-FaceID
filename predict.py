@@ -47,10 +47,16 @@ class Predictor(BasePredictor):
     def predict(
         self,
         face_image: Path = Input(description="Face image"),
-        prompt: str = Input(default="photo of a woman in red dress in a garden"),
-        negative_prompt: str = Input(default="monochrome, lowres, bad anatomy, worst quality, low quality, blurry, multiple people"),
+        prompt: str = Input(
+            default="portrait of a beautiful immortal fairy in traditional ancient Chinese attire, fantasy, intricate silk dress, ethereal lighting, detailed face, elegant hair ornaments",
+            description="Prompt for the generated image"
+        ),
+        negative_prompt: str = Input(
+            default="monochrome, lowres, bad anatomy, worst quality, low quality, blurry, multiple people",
+            description="Negative prompt to avoid unwanted elements"
+        ),
         width: int = Input(default=1024, ge=64, le=2048),
-        height: int = Input(default=1024, ge=64, le=2048),
+        height: int = Input(default=1820, ge=64, le=3072),  # 9:16 ratio default
         num_outputs: int = Input(default=1, ge=1, le=4),
         num_inference_steps: int = Input(default=30, ge=1, le=200),
         seed: int = Input(default=None),
