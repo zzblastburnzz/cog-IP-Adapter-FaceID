@@ -1,0 +1,13 @@
+numpy>=2.0.1
+torch==2.0.1+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.15.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+diffusers==0.27.2
+transformers>=4.42.0
+accelerate==0.30.1
+einops
+invisible-watermark>=0.3.0
+insightface==0.7.3
+onnxruntime==1.18.1
+opencv-python-headless==4.10.0.84
+pillow==10.4.0
+git+https://github.com/tencent-ailab/IP-Adapter.git
