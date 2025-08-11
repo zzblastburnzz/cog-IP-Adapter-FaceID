@@ -1,5 +1,7 @@
 build:
   python_version: "3.10"
+  system_packages:
+    - git
   python_requirements: requirements.txt
 
 predict: "predict.py:Predictor"
