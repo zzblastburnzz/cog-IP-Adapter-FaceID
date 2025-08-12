@@ -1,7 +1,7 @@
 import os
 import torch
 from PIL import Image
-from diffusers import StableDiffusionPipeline, DDIMScheduler, AutoencoderKL
+from diffusers import StableDiffusionXLPipeline, DDIMScheduler, AutoencoderKL
 from diffusers.utils import load_image
 from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
 from safetensors.torch import load_file
@@ -18,139 +18,144 @@ class Output(BaseModel):
 
 class Predictor(BasePredictor):
     def setup(self):
-        """Load the model into memory to make running multiple predictions efficient"""
-        
-        # Load scheduler
-        self.scheduler = DDIMScheduler(
-            num_train_timesteps=1000,
-            beta_start=0.00085,
-            beta_end=0.012,
-            beta_schedule="scaled_linear",
-            clip_sample=False,
-            set_alpha_to_one=False,
-            steps_offset=1,
-        )
-        
-        # Load VAE
-        self.vae = AutoencoderKL.from_pretrained(
-            VAE_NAME,
-            cache_dir=MODEL_CACHE,
-            torch_dtype=torch.float16,
-        )
-        
-        # Load base model
-        self.pipe = StableDiffusionPipeline.from_pretrained(
-            MODEL_NAME,
-            vae=self.vae,
-            scheduler=self.scheduler,
-            torch_dtype=torch.float16,
-            cache_dir=MODEL_CACHE,
-        ).to("cuda")
-        
-        # Load IP Adapter components
-        self.image_processor = CLIPImageProcessor.from_pretrained(
-            IP_ADAPTER_NAME,
-            subfolder="image_processor",
-            cache_dir=MODEL_CACHE,
-        )
-        
-        self.image_proj_model = CLIPVisionModelWithProjection.from_pretrained(
-            IP_ADAPTER_NAME,
-            subfolder="image_projection",
-            cache_dir=MODEL_CACHE,
-            torch_dtype=torch.float16,
-        ).to("cuda")
-        
-        # Load FaceID model
-        self.faceid_model = load_file(
-            FACEID_NAME,
-            device="cuda"
-        )
-        
-        # Load LoRA weights for ancient style
-        self.pipe.load_lora_weights("path/to/ancient_style_lora", weight_name="ancient_style.safetensors")
-        
+        """Load the model into memory"""
+        if not os.path.exists(MODEL_CACHE):
+            os.makedirs(MODEL_CACHE)
+
+        # Load components with error handling
+        try:
+            self.scheduler = DDIMScheduler.from_pretrained(
+                MODEL_NAME,
+                subfolder="scheduler",
+                cache_dir=MODEL_CACHE
+            )
+            
+            self.vae = AutoencoderKL.from_pretrained(
+                VAE_NAME,
+                cache_dir=MODEL_CACHE,
+                torch_dtype=torch.float16,
+            )
+            
+            self.pipe = StableDiffusionXLPipeline.from_pretrained(
+                MODEL_NAME,
+                vae=self.vae,
+                scheduler=self.scheduler,
+                torch_dtype=torch.float16,
+                cache_dir=MODEL_CACHE,
+                use_safetensors=True,
+            ).to("cuda")
+            
+            # Enable memory efficient attention
+            self.pipe.enable_xformers_memory_efficient_attention()
+            
+            # Load IP Adapter components
+            self.image_processor = CLIPImageProcessor.from_pretrained(
+                IP_ADAPTER_NAME,
+                subfolder="image_processor",
+                cache_dir=MODEL_CACHE,
+            )
+            
+            self.image_proj_model = CLIPVisionModelWithProjection.from_pretrained(
+                IP_ADAPTER_NAME,
+                subfolder="image_projection",
+                cache_dir=MODEL_CACHE,
+                torch_dtype=torch.float16,
+            ).to("cuda")
+            
+            # Load FaceID model
+            faceid_path = os.path.join(MODEL_CACHE, "faceid.safetensors")
+            if not os.path.exists(faceid_path):
+                faceid_data = load_file(FACEID_NAME)
+                torch.save(faceid_data, faceid_path)
+            
+            # Load LoRA for ancient style (example)
+            self.pipe.load_lora_weights(
+                "ostris/ai_portrait_lora",
+                weight_name="ipadapter_ai_portrait.safetensors",
+                adapter_name="ancient_style"
+            )
+            
+        except Exception as e:
+            raise RuntimeError(f"Error loading models: {str(e)}")
+
     def predict(
         self,
-        face_image: Path = Input(description="Ảnh khuôn mặt đầu vào"),
+        face_image: Path = Input(description="Input face image"),
         vip_level: str = Input(
-            description="Cấp VIP", 
-            choices=["Đồng", "Bạc", "Vàng", "Bạch Kim", "Kim Cương"],
-            default="Bạc"
+            description="VIP level", 
+            choices=["Bronze", "Silver", "Gold", "Platinum", "Diamond"],
+            default="Silver"
         ),
         profession: str = Input(
-            description="Nghề nghiệp", 
-            choices=["Kiếm Khách", "Đao Khách", "Pháp Sư", "Y Sư", "Cung Thủ", "Tu Sĩ"],
-            default="Kiếm Khách"
+            description="Character class", 
+            choices=["Swordsman", "Blademaster", "Mage", "Healer", "Archer", "Monk"],
+            default="Swordsman"
         ),
         gender: str = Input(
-            description="Giới tính",
-            choices=["Nam", "Nữ"],
-            default="Nam"
+            description="Gender",
+            choices=["Male", "Female"],
+            default="Male"
         ),
         seed: int = Input(
             description="Random seed", 
             default=None
         ),
     ) -> Output:
-        """Run a single prediction on the model"""
-        
-        if seed is None:
-            seed = int.from_bytes(os.urandom(2), "big")
-        torch.manual_seed(seed)
-        
-        # Load and process face image
-        face_img = load_image(str(face_image))
-        face_img = face_img.resize((512, 512))
-        
-        # Generate prompt based on inputs
-        prompt = self._generate_prompt(vip_level, profession, gender)
-        negative_prompt = "low quality, blurry, distorted, deformed, extra limbs, bad anatomy"
-        
-        # Generate image
-        output_image = self.pipe(
-            prompt=prompt,
-            negative_prompt=negative_prompt,
-            ip_adapter_image=face_img,
-            height=1024,
-            width=576,  # 9:16 aspect ratio
-            num_inference_steps=30,
-            guidance_scale=7,
-            generator=torch.Generator(device="cuda").manual_seed(seed),
-        ).images[0]
-        
-        output_path = "/tmp/output.png"
-        output_image.save(output_path)
-        
-        return Output(portrait=Path(output_path))
+        """Generate ancient portrait"""
+        try:
+            if seed is None:
+                seed = int.from_bytes(os.urandom(2), "big")
+            torch.manual_seed(seed)
+            
+            # Load and process face image
+            face_img = load_image(str(face_image))
+            face_img = face_img.resize((512, 512))
+            
+            # Generate prompt
+            prompt = self._generate_prompt(vip_level, profession, gender)
+            negative_prompt = "low quality, blurry, distorted, deformed, extra limbs, bad anatomy"
+            
+            # Generate image with error handling
+            output_image = self.pipe(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                ip_adapter_image=face_img,
+                height=1024,
+                width=576,
+                num_inference_steps=30,
+                guidance_scale=7,
+                generator=torch.Generator(device="cuda").manual_seed(seed),
+            ).images[0]
+            
+            output_path = "/tmp/output.png"
+            output_image.save(output_path)
+            
+            return Output(portrait=Path(output_path))
+            
+        except Exception as e:
+            raise RuntimeError(f"Error generating image: {str(e)}")
     
     def _generate_prompt(self, vip_level, profession, gender):
-        """Generate detailed prompt based on user inputs"""
-        
-        # Map VIP level to quality descriptors
-        vip_map = {
-            "Đồng": "simple, modest",
-            "Bạc": "elegant, refined",
-            "Vàng": "luxurious, ornate",
-            "Bạch Kim": "exquisite, mastercraft",
-            "Kim Cương": "legendary, divine"
+        """Generate detailed prompt"""
+        quality_map = {
+            "Bronze": "simple, modest quality",
+            "Silver": "elegant, refined quality",
+            "Gold": "luxurious, ornate quality",
+            "Platinum": "exquisite, mastercraft quality",
+            "Diamond": "legendary, divine quality"
         }
         
-        # Map profession to costume and accessories
-        profession_map = {
-            "Kiếm Khách": f"{gender} martial artist holding a sword, wearing traditional martial arts robe",
-            "Đao Khách": f"{gender} warrior wielding a broadsword, wearing armored robes",
-            "Pháp Sư": f"{gender} mage with glowing magical energy, wearing flowing mystical robes",
-            "Y Sư": f"{gender} healer with herbal medicine bag, wearing light medicinal robes",
-            "Cung Thủ": f"{gender} archer with a longbow, wearing leather and silk hunting outfit",
-            "Tu Sĩ": f"{gender} monk with prayer beads, wearing simple but elegant monastic robes"
+        class_map = {
+            "Swordsman": f"{gender} martial artist with sword",
+            "Blademaster": f"{gender} warrior with broadsword",
+            "Mage": f"{gender} mage with magical staff",
+            "Healer": f"{gender} healer with herbal medicine",
+            "Archer": f"{gender} archer with longbow",
+            "Monk": f"{gender} monk with prayer beads"
         }
         
-        base_prompt = (
-            f"Portrait of a {vip_map[vip_level]} {profession_map[profession]}, "
+        return (
+            f"{quality_map[vip_level]} {class_map[profession]}, "
             "ancient Chinese xianxia style, intricate details, highly detailed, "
-            "digital painting, artstation, concept art, smooth, sharp focus, "
-            "illustration, unreal engine 5, 8k, cinematic lighting"
+            "digital painting, cinematic lighting, 8k resolution"
         )
-        
-        return base_prompt

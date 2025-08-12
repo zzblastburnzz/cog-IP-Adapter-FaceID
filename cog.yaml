@@ -1,15 +1,12 @@
 build:
   gpu: true
   system_packages:
-    - "libgl1-mesa-glx"
+    - "libgl1"
     - "libglib2.0-0"
   python_version: "3.10"
-  python_packages:
-    - "torch==2.1.2"
-    - "transformers==4.37.2"
-    - "diffusers==0.25.0"
-    - "accelerate==0.26.1"
-    - "safetensors==0.4.2"
-    - "pillow==10.1.0"
-    - "xformers==0.0.23.post1"
+  python_requirements: "requirements.txt"
+  cog_runtime: true  # Sử dụng Cog runtime mới
+  run:
+    - "apt-get update && apt-get install -y wget"
+    - "wget https://github.com/huggingface/diffusers/raw/main/scripts/convert_diffusers_to_original_stable_diffusion.py"
 predict: "predict.py:Predictor"
