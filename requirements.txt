@@ -1,26 +1,13 @@
-# Bắt buộc NumPy 2.x
+--extra-index-url https://download.pytorch.org/whl/cpu
 numpy>=2.0.1
-
-# Torch CPU (không cần torchvision)
-torch==2.0.1+cpu --extra-index-url https://download.pytorch.org/whl/cpu
-
-# Diffusers & Accelerate (ổn với NumPy 2.x)
+torch==2.0.1+cpu
 diffusers==0.27.2
-accelerate==0.30.1
-
-# Transformers bản tương thích với hub 0.24.x
 transformers==4.43.3
 huggingface_hub==0.24.6
-safetensors>=0.3.1
-
-# IP-Adapter
-git+https://github.com/tencent-ailab/IP-Adapter.git
-
-# Face + ORT (hỗ trợ NumPy 2.x)
+accelerate==0.30.1
+einops
 insightface==0.7.3
 onnxruntime==1.20.1
-
-# I/O
 opencv-python-headless==4.10.0.84
 pillow==10.4.0
-einops
+git+https://github.com/tencent-ailab/IP-Adapter.git
