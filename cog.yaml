@@ -3,16 +3,5 @@ build:
   python_requirements: "requirements.txt"
   system_packages:
     - git
-  env:
-    TRANSFORMERS_NO_TORCHVISION: "1"
-    TOKENIZERS_PARALLELISM: "false"
-    OMP_NUM_THREADS: "1"
-    OPENBLAS_NUM_THREADS: "1"
-    MKL_NUM_THREADS: "1"
-    NUMEXPR_NUM_THREADS: "1"
-    OMP_MAX_ACTIVE_LEVELS: "1"
-    OMP_WAIT_POLICY: "PASSIVE"
-    HF_HUB_DISABLE_TELEMETRY: "1"
-    HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
 
 predict: "predict.py:Predictor"
