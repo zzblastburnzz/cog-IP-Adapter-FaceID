@@ -5,8 +5,6 @@ build:
     - "libglib2.0-0"
   python_version: "3.10"
   python_requirements: "requirements.txt"
-  cog_runtime: true  # Sử dụng Cog runtime mới
-  run:
-    - "apt-get update && apt-get install -y wget"
-    - "wget https://github.com/huggingface/diffusers/raw/main/scripts/convert_diffusers_to_original_stable_diffusion.py"
+  # Disable new runtime to avoid compatibility issues
+  cog_runtime: false
 predict: "predict.py:Predictor"
