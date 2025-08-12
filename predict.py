@@ -1,3 +1,69 @@
+from cog import BasePredictor, Input, Path
+import os
+import cv2
+import torch
+from typing import List
+from huggingface_hub import hf_hub_download
+from insightface.app import FaceAnalysis
+from ip_adapter.ip_adapter_faceid import IPAdapterFaceID
+from diffusers import StableDiffusionPipeline, AutoencoderKL, EulerAncestralDiscreteScheduler
+
+# ==== Set biến môi trường ngay trong code ====
+os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_MAX_ACTIVE_LEVELS"] = "1"
+os.environ["OMP_WAIT_POLICY"] = "PASSIVE"
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
+BASE_MODEL = "SG161222/Realistic_Vision_V4.0_noVAE"
+VAE_MODEL = "stabilityai/sd-vae-ft-mse"
+IP_CACHE = "./ip-cache"
+IP_REPO = "h94/IP-Adapter-FaceID"
+IP_FILE = "ip-adapter-faceid_sd15.bin"
+
+def _ensure_multiple_of_8(x: int) -> int:
+    return max(64, (x // 8) * 8)
+
+class Predictor(BasePredictor):
+    def setup(self) -> None:
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.torch_dtype = torch.float16 if self.device == "cuda" else torch.float32
+
+        # Tải checkpoint bằng HuggingFace Hub
+        os.makedirs(IP_CACHE, exist_ok=True)
+        ckpt_path = os.path.join(IP_CACHE, IP_FILE)
+        if not os.path.exists(ckpt_path):
+            ckpt_path = hf_hub_download(
+                repo_id=IP_REPO,
+                filename=IP_FILE,
+                local_dir=IP_CACHE,
+                local_dir_use_symlinks=False,
+            )
+
+        # InsightFace
+        self.app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+        self.app.prepare(ctx_id=0, det_size=(640, 640))
+
+        # Stable Diffusion pipeline
+        vae = AutoencoderKL.from_pretrained(VAE_MODEL, torch_dtype=self.torch_dtype)
+        pipe = StableDiffusionPipeline.from_pretrained(
+            BASE_MODEL,
+            torch_dtype=self.torch_dtype,
+            vae=vae,
+            safety_checker=None,
+            feature_extractor=None,
+        )
+        pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
+        self.pipe = pipe.to(self.device)
+
+        # IP-Adapter FaceID
+        self.ip_model = IPAdapterFaceID(self.pipe, ckpt_path, self.device)
+
     @torch.inference_mode()
     def predict(
         self,
@@ -20,7 +86,6 @@
         guidance_scale: float = Input(default=5.0, ge=0.0, le=20.0),
         seed: int = Input(default=None),
     ) -> List[Path]:
-        # Seed
         if seed is None:
             seed = int.from_bytes(os.urandom(4), "big")
         generator = torch.Generator(device=self.device).manual_seed(seed)
