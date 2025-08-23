@@ -5,4 +5,9 @@ build:
     - "libglib2.0-0"
   python_version: "3.10"
   python_requirements: "requirements.txt"
+  environment:
+    - DISPLAY=:0
+    - QT_QPA_PLATFORM=offscreen
+    - GDK_BACKEND=x11
+    - WPE_BACKEND=none
 predict: "predict.py:Predictor"
